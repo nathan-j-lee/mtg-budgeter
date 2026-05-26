@@ -1,0 +1,27 @@
+{
+  "name": "mtg-budgeter",
+  "version": "1.0.0",
+  "description": "This project is a browser-based utility designed to recommend alternative Magic: The Gathering cards for any given selection. It allows players to find budget-friendly replacements, functional backups, or format-legal alternatives by extracting a card's baseline attributes and mapping them against Scryfall’s robust database engine.",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nathan-j-lee/mtg-budgeter.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/nathan-j-lee/mtg-budgeter/issues"
+  },
+  "homepage": "https://github.com/nathan-j-lee/mtg-budgeter#readme",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "node-fetch": "^3.3.2"
+  }
+}

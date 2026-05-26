@@ -176,3 +176,66 @@ button:hover {
 .hidden {
     display: none !important;
 }
+
+/* --- Card Profile Display Layout --- */
+.card-profile {
+    margin-top: 30px;
+    background-color: #1e1e1e;
+    border: 1px solid #2a2a2a;
+    border-radius: 12px;
+    padding: 24px;
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 24px;
+}
+
+@media (max-width: 600px) {
+    .card-profile {
+        grid-template-columns: 1fr;
+    }
+}
+
+.art-frame img {
+    width: 100%;
+    height: auto;
+    border-radius: 4.75% / 3.5%; /* Mimics real MTG card corner ratios */
+    box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+}
+
+.profile-details h2 {
+    margin-top: 0;
+    color: #fff;
+    font-size: 24px;
+}
+
+.type-line {
+    color: #aaa;
+    font-style: italic;
+    margin-bottom: 16px;
+}
+
+.tag-section h3 {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #ff79c6;
+    margin-bottom: 10px;
+}
+
+.tag-cloud {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* Individual dynamic tag pills */
+.extracted-tag {
+    background-color: #282a36;
+    color: #50fa7b;
+    border: 1px solid #44475a;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: monospace;
+    font-weight: bold;
+}
