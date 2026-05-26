@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MTG Alternative Finder - Step 1.5</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <h1>🔮 MTG Alternative Finder</h1>
+    <p class="subtitle">Step 1.5: Input a card name and select target mana colors</p>
+
+    <!-- Search Bar Wrapper -->
+    <div class="search-container">
+        <input type="text" id="cardInput" placeholder="Enter card name (e.g., Lightning Bolt)..." autofocus>
+        <button id="searchBtn">Search</button>
+    </div>
+
+    <!-- NEW: Mana Color Selector Wrapper -->
+    <div class="color-selector">
+        <span class="selector-label">Target Colors:</span>
+        <div class="color-options">
+            <label class="color-checkbox-wrapper">
+                <input type="checkbox" name="mtgColor" value="C" id="color-C">
+                <span class="color-btn colorless">Colorless</span>
+            </label>
+            <label class="color-checkbox-wrapper">
+                <input type="checkbox" name="mtgColor" value="W" class="colored-pick">
+                <span class="color-btn white">White</span>
+            </label>
+            <label class="color-checkbox-wrapper">
+                <input type="checkbox" name="mtgColor" value="U" class="colored-pick">
+                <span class="color-btn blue">Blue</span>
+            </label>
+            <label class="color-checkbox-wrapper">
+                <input type="checkbox" name="mtgColor" value="B" class="colored-pick">
+                <span class="color-btn black">Black</span>
+            </label>
+            <label class="color-checkbox-wrapper">
+                <input type="checkbox" name="mtgColor" value="R" class="colored-pick">
+                <span class="color-btn red">Red</span>
+            </label>
+            <label class="color-checkbox-wrapper">
+                <input type="checkbox" name="mtgColor" value="G" class="colored-pick">
+                <span class="color-btn green">Green</span>
+            </label>
+        </div>
+    </div>
+
+    <!-- Debug console area to monitor state updates -->
+    <div class="debug-panel" id="debugOutput">
+        Waiting for you to click search or press Enter...
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
