@@ -212,6 +212,27 @@ async function renderCardProfile(card) {
     }
 }
 
+// Grey out Colorless when any other color is selected
+const colorCheckboxes = document.querySelectorAll('input[name="mtgColor"]');
+const colorlessCheckbox = document.getElementById('color-C');
+
+colorCheckboxes.forEach(cb => {
+    cb.addEventListener('change', () => {
+        const anyColorChecked = [...colorCheckboxes]
+            .filter(c => c.value !== 'C')
+            .some(c => c.checked);
+
+        if (anyColorChecked) {
+            colorlessCheckbox.checked = false;
+            colorlessCheckbox.closest('label').style.opacity = '0.3';
+            colorlessCheckbox.closest('label').style.pointerEvents = 'none';
+        } else {
+            colorlessCheckbox.closest('label').style.opacity = '1';
+            colorlessCheckbox.closest('label').style.pointerEvents = 'auto';
+        }
+    });
+});
+
 // Event Listeners
 searchBtn.addEventListener('click', handleSearchSubmit);
 cardInput.addEventListener('keydown', (event) => {
@@ -219,4 +240,18 @@ cardInput.addEventListener('keydown', (event) => {
         closeAutocomplete();
         handleSearchSubmit();
     }
+});
+
+// Focus and select all text in the search bar when / is pressed
+document.addEventListener('keydown', (e) => {
+    if (e.key === '/' && document.activeElement !== cardInput) {
+        e.preventDefault(); // stop / from being typed into the input
+        cardInput.focus();
+        cardInput.select();
+    }
+});
+
+// Select all text when clicking into the search bar
+cardInput.addEventListener('click', () => {
+    cardInput.select();
 });
