@@ -13,6 +13,13 @@ const tagCloud = document.getElementById('tagCloud');
 
 let debounceTimer;
 
+// Saved state for the current card's gameplay tags
+let currentCardTags = [];
+
+// Local in-memory cache — keyed by "set:collector_number"
+// Stores { card, tags } so both the card data and its otags are reused on repeat lookups
+const cardCache = {};
+
 // Autocomplete Setup
 cardInput.addEventListener('input', () => {
     clearTimeout(debounceTimer);
@@ -68,6 +75,27 @@ document.addEventListener('click', (e) => {
     }
 });
 
+// Returns the selected mana colors from the checkboxes
+function getSelectedColors() {
+    return [...document.querySelectorAll('input[name="mtgColor"]:checked')].map(el => el.value);
+}
+
+// Builds the Scryfall search string from saved otags and selected colors
+function buildScryfallQuery(tags, colors) {
+    const tagPart = tags.map(t => `otag:${t.slug}`).join(' ');
+
+    let colorPart;
+    if (colors.length === 0) {
+        colorPart = '';
+    } else {
+        colorPart = `color<=${colors.join('')}`;
+    }
+
+    const query = [tagPart, colorPart].filter(Boolean).join(' ');
+    console.log('Scryfall query:', query);
+    return query;
+}
+
 async function handleSearchSubmit() {
     const currentInputValue = cardInput.value.trim();
 
@@ -88,7 +116,6 @@ async function handleSearchSubmit() {
         }
 
         const cardData = await response.json();
-
         await renderCardProfile(cardData);
 
     } catch (error) {
@@ -96,6 +123,33 @@ async function handleSearchSubmit() {
         debugOutput.style.color = "#ff5555";
         cardProfile.classList.add('hidden');
     }
+}
+
+async function fetchTags(card) {
+    const cacheKey = `${card.set}:${card.collector_number}`;
+
+    // Cache hit — return saved tags immediately, no network call
+    if (cardCache[cacheKey]) {
+        console.log(`Cache hit for ${cacheKey} — skipping Tagger fetch`);
+        return cardCache[cacheKey].tags;
+    }
+
+    // Cache miss — fetch from Express server
+    console.log(`Cache miss for ${cacheKey} — fetching from Tagger`);
+    const response = await fetch(
+        `http://localhost:3001/api/tags?set=${card.set}&number=${encodeURIComponent(card.collector_number)}`
+    );
+
+    if (!response.ok) throw new Error('Tag fetch failed');
+
+    const { tags } = await response.json();
+    const gameplayTags = tags.filter(t => t.type === 'ORACLE_CARD_TAG');
+
+    // Write to cache
+    cardCache[cacheKey] = { card, tags: gameplayTags };
+    console.log(`Cached ${gameplayTags.length} tags for ${cacheKey}`);
+
+    return gameplayTags;
 }
 
 async function renderCardProfile(card) {
@@ -107,18 +161,14 @@ async function renderCardProfile(card) {
     cardImage.src = isMultiFaced ? primaryFace.image_uris.normal : card.image_uris.normal;
 
     tagCloud.innerHTML = '';
+    currentCardTags = [];
     debugOutput.innerText = `⏳ Fetching crowdsourced tags for "${card.name}"...`;
     debugOutput.style.color = "#aaa";
 
     try {
-        const response = await fetch(
-            `http://localhost:3001/api/tags?set=${card.set}&number=${encodeURIComponent(card.collector_number)}`
-        );
+        const gameplayTags = await fetchTags(card);
 
-        if (!response.ok) throw new Error('Tag fetch failed');
-
-        const { tags } = await response.json();
-        const gameplayTags = tags.filter(t => t.type === 'ORACLE_CARD_TAG');
+        currentCardTags = gameplayTags;
 
         if (gameplayTags.length === 0) {
             const empty = document.createElement('span');
@@ -135,8 +185,15 @@ async function renderCardProfile(card) {
             });
         }
 
+        const selectedColors = getSelectedColors();
+        const scryfallQuery = buildScryfallQuery(currentCardTags, selectedColors);
+        console.log('Ready to search Scryfall with:', scryfallQuery);
+
         cardProfile.classList.remove('hidden');
-        debugOutput.innerText = `✅ Loaded "${card.name}" with ${gameplayTags.length} crowdsourced tag(s)!`;
+
+        const cacheKey = `${card.set}:${card.collector_number}`;
+        const fromCache = !!cardCache[cacheKey];
+        debugOutput.innerText = `✅ Loaded "${card.name}" with ${gameplayTags.length} crowdsourced tag(s)!${fromCache ? ' (from cache)' : ''}`;
         debugOutput.style.color = "#8be9fd";
 
     } catch (err) {
