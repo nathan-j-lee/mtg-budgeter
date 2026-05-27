@@ -33,6 +33,7 @@ cardInput.addEventListener('input', () => {
     }, 300);
 });
 
+// Scryfall has its own autocomplete API, pretty cool
 async function fetchAutocompleteSuggestions(query) {
     try {
         const response = await fetch(`https://api.scryfall.com/cards/autocomplete?q=${encodeURIComponent(query)}`);
@@ -44,6 +45,7 @@ async function fetchAutocompleteSuggestions(query) {
     }
 }
 
+// Handle search and autocomplete close when name is clicked on
 function renderAutocomplete(suggestions) {
     autocompleteResults.innerHTML = '';
     if (!suggestions || suggestions.length === 0) {
@@ -64,11 +66,13 @@ function renderAutocomplete(suggestions) {
     autocompleteResults.classList.remove('hidden');
 }
 
+// Helper function to close autocomplete form
 function closeAutocomplete() {
     autocompleteResults.innerHTML = '';
     autocompleteResults.classList.add('hidden');
 }
 
+// Handle mismatch of search bar and autocomplete/no results found
 document.addEventListener('click', (e) => {
     if (e.target !== cardInput && e.target !== autocompleteResults) {
         closeAutocomplete();
@@ -125,16 +129,20 @@ async function handleSearchSubmit() {
     }
 }
 
-async function fetchTags(card) {
-    const cacheKey = `${card.set}:${card.collector_number}`;
+// Namespaces entries to prevent collision with localStorage
+const CACHE_PREFIX = 'mtg_tags:';
 
-    // Cache hit — return saved tags immediately, no network call
-    if (cardCache[cacheKey]) {
+async function fetchTags(card) {
+    const cacheKey = `${CACHE_PREFIX}${card.set}:${card.collector_number}`;
+
+    // Check localStorage first for cache HIT
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
         console.log(`Cache hit for ${cacheKey} — skipping Tagger fetch`);
-        return cardCache[cacheKey].tags;
+        return JSON.parse(cached);
     }
 
-    // Cache miss — fetch from Express server
+    // Cache MISS — fetch from Express server
     console.log(`Cache miss for ${cacheKey} — fetching from Tagger`);
     const response = await fetch(
         `http://localhost:3001/api/tags?set=${card.set}&number=${encodeURIComponent(card.collector_number)}`
@@ -145,8 +153,8 @@ async function fetchTags(card) {
     const { tags } = await response.json();
     const gameplayTags = tags.filter(t => t.type === 'ORACLE_CARD_TAG');
 
-    // Write to cache
-    cardCache[cacheKey] = { card, tags: gameplayTags };
+    // Write to localStorage
+    localStorage.setItem(cacheKey, JSON.stringify(gameplayTags));
     console.log(`Cached ${gameplayTags.length} tags for ${cacheKey}`);
 
     return gameplayTags;
