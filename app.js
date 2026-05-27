@@ -23,7 +23,7 @@ cardInput.addEventListener('input', () => {
     }
     debounceTimer = setTimeout(() => {
         fetchAutocompleteSuggestions(query);
-    }, 300); 
+    }, 300);
 });
 
 async function fetchAutocompleteSuggestions(query) {
@@ -50,7 +50,7 @@ function renderAutocomplete(suggestions) {
         itemDiv.addEventListener('click', () => {
             cardInput.value = name;
             closeAutocomplete();
-            handleSearchSubmit(); 
+            handleSearchSubmit();
         });
         autocompleteResults.appendChild(itemDiv);
     });
@@ -68,7 +68,6 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// --- REFIXED: SECURE DATA RESOLVER THROUGH PUBLIC SEARCH API ---
 async function handleSearchSubmit() {
     const currentInputValue = cardInput.value.trim();
 
@@ -78,22 +77,18 @@ async function handleSearchSubmit() {
         return;
     }
 
-    debugOutput.innerText = `🔍 Reading Scryfall data index for "${currentInputValue}"...`;
+    debugOutput.innerText = `🔍 Looking up "${currentInputValue}"...`;
     debugOutput.style.color = "#aaa";
 
     try {
-        // Query using exact name via public search system to ensure full attribute delivery
-        const response = await fetch(`https://api.scryfall.com/cards/search?q=!` + encodeURIComponent(`"${currentInputValue}"`));
-        
+        const response = await fetch(`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(currentInputValue)}`);
+
         if (!response.ok) {
-            throw new Error("Card data could not be verified in the search catalog index.");
+            throw new Error("Card not found. Check the name and try again.");
         }
 
-        const searchResult = await response.json();
-        
-        // Grab the primary card from the returned search array list
-        const cardData = searchResult.data[0];
-        
+        const cardData = await response.json();
+
         await renderCardProfile(cardData);
 
     } catch (error) {
@@ -123,8 +118,6 @@ async function renderCardProfile(card) {
         if (!response.ok) throw new Error('Tag fetch failed');
 
         const { tags } = await response.json();
-
-        // Filter to gameplay-relevant tags only
         const gameplayTags = tags.filter(t => t.type === 'ORACLE_CARD_TAG');
 
         if (gameplayTags.length === 0) {
@@ -147,53 +140,18 @@ async function renderCardProfile(card) {
         debugOutput.style.color = "#8be9fd";
 
     } catch (err) {
-        // Tagger fetch failed — fall back to your original local tag logic
-        console.warn('Tagger fetch failed, falling back to local tags:', err);
-
-        const oracleText = isMultiFaced
-            ? (card.card_faces[0].oracle_text + " " + card.card_faces[1].oracle_text)
-            : (card.oracle_text || "");
-
-        const textSnapshot = oracleText.toLowerCase();
-        let generatedTags = [];
-
-        if (card.keywords && card.keywords.length > 0) {
-            generatedTags = generatedTags.concat(card.keywords);
-        }
-
-        const splitTypes = card.type_line.replace('—', ' ').split(/\s+/).filter(t => t && t !== '//');
-        generatedTags = generatedTags.concat(splitTypes);
-
-        if (textSnapshot.includes("draw a card") || textSnapshot.includes("draw cards")) generatedTags.push("card-draw");
-        if (textSnapshot.includes("destroy target") || textSnapshot.includes("exile target")) generatedTags.push("removal");
-        if (textSnapshot.includes("counter target")) generatedTags.push("counterspell");
-        if (textSnapshot.includes("search your library")) generatedTags.push("tutor-ramp");
-        if (textSnapshot.includes("add mana") || textSnapshot.includes("add {")) generatedTags.push("mana-production");
-
-        const finalCleanTags = [...new Set(generatedTags.map(t => t.toLowerCase()))];
-
-        finalCleanTags.forEach(tag => {
-            const pill = document.createElement('span');
-            pill.className = 'extracted-tag';
-            pill.innerText = tag;
-            tagCloud.appendChild(pill);
-        });
-
+        console.error('Tag fetch failed:', err);
         cardProfile.classList.remove('hidden');
-        debugOutput.innerText = `⚠️ Tagger unavailable — showing local tags for "${card.name}"`;
-        debugOutput.style.color = "#ffb86c";
+        debugOutput.innerText = `❌ Could not load tags for "${card.name}". Is the server running?`;
+        debugOutput.style.color = "#ff5555";
     }
 }
 
-async function fetchTaggerTags(card) {
-  const set = card.set;           // e.g. "lea"
-  const number = card.collector_number; // e.g. "232"
-
-  const response = await fetch(
-    `http://localhost:3001/api/tags?set=${set}&number=${encodeURIComponent(number)}`
-  );
-  if (!response.ok) throw new Error('Tag fetch failed');
-  
-  const { tags } = await response.json();
-  return tags;
-}
+// Event Listeners
+searchBtn.addEventListener('click', handleSearchSubmit);
+cardInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+        closeAutocomplete();
+        handleSearchSubmit();
+    }
+});
