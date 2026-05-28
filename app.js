@@ -52,6 +52,19 @@ async function fetchAutocompleteSuggestions(query) {
     }
 }
 
+function formatPrice(prices) {
+    const usd     = prices?.usd;
+    const usdFoil = prices?.usd_foil;
+
+    if (!usd && !usdFoil && !eur && !eurFoil && !tix) return '<span class="price-na">N/A</span>';
+
+    let html = '';
+    if (usd)     html += `<span class="price-tag">USD $${parseFloat(usd).toFixed(2)}</span>`;
+    if (usdFoil) html += `<span class="price-tag foil">USD Foil $${parseFloat(usdFoil).toFixed(2)}</span>`;
+
+    return html;
+}
+
 // Handle search and autocomplete close when name is clicked on
 function renderAutocomplete(suggestions) {
     autocompleteResults.innerHTML = '';
@@ -173,6 +186,7 @@ async function renderCardProfile(card) {
 
     profileName.innerText = card.name;
     profileTypes.innerText = card.type_line;
+    document.getElementById('profilePrice').innerHTML = formatPrice(card.prices);
     cardImage.src = isMultiFaced ? primaryFace.image_uris.normal : card.image_uris.normal;
 
     tagCloud.innerHTML = '';
@@ -340,7 +354,9 @@ function renderAlternatives(cards, hasMore = false) {
 
         const cardEl = document.createElement('div');
         cardEl.className = 'alternative-card';
-        cardEl.innerHTML = `<img src="${imageUrl}" alt="${card.name}" title="${card.name}">`;
+        cardEl.innerHTML = `
+            <img src="${imageUrl}" alt="${card.name}" title="${card.name}">
+            <div class="alt-price">${formatPrice(card.prices)}</div>`;
         resultsContainer.appendChild(cardEl);
     });
 
@@ -418,9 +434,15 @@ function hideAlternativesLoadingOverlay() {
 }
 
 // Event Listeners
+
 searchBtn.addEventListener('click', handleSearchSubmit);
+
 cardInput.addEventListener('keydown', (event) => {
     if (event.key === 'Enter') {
+        const firstItem = autocompleteResults.querySelector('.autocomplete-item');
+        if (firstItem && !autocompleteResults.classList.contains('hidden')) {
+            cardInput.value = firstItem.innerText;
+        }
         closeAutocomplete();
         handleSearchSubmit();
     }

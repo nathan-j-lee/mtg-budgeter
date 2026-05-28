@@ -328,3 +328,53 @@ input[type="text"]:focus ~ .kbd.search-hint {
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
+
+.price-section h3 {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #ff79c6;
+    margin-bottom: 10px;
+    margin-top: 16px;
+}
+
+.profile-price {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.price-tag {
+    background-color: #282a36;
+    color: #f1fa8c;
+    border: 1px solid #44475a;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: monospace;
+    font-weight: bold;
+}
+
+.price-tag.foil {
+    color: #bd93f9;
+    border-color: #6272a4;
+}
+
+.price-na {
+    color: #555;
+    font-size: 13px;
+    font-style: italic;
+}
+
+.alt-price {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 6px;
+    justify-content: center;
+}
+
+.alt-price .price-tag {
+    font-size: 11px;
+    padding: 3px 8px;
+}
