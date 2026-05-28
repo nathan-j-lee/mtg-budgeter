@@ -100,7 +100,7 @@ function buildScryfallQuery(tags, colors) {
     if (colors.length === 0) {
         colorPart = '';
     } else {
-        colorPart = `color<=${colors.join('')}`;
+        colorPart = `id<=${colors.join('')}`;
     }
 
     const query = [wrappedTags, colorPart].filter(Boolean).join(' ');
@@ -302,8 +302,8 @@ async function showAlternativesPage() {
     const pageCards = alternativesBuffer.slice(start, end);
     const hasMore = end < alternativesBuffer.length || nextScryfallUrl !== null;
 
-    renderAlternatives(pageCards, hasMore);
     alternativesPage++;
+    renderAlternatives(pageCards, hasMore);
 }
 
 function renderAlternatives(cards, hasMore = false) {
