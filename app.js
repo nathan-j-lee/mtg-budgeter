@@ -93,17 +93,16 @@ function getSelectedColors() {
 
 // Builds the Scryfall search string from saved otags and selected colors
 function buildScryfallQuery(tags, colors) {
-    const tagPart = tags.map(t => `otag:${t.slug}`).join(' or ');
-    const wrappedTags = `(${tagPart})`;
+    if (!tags || tags.length === 0) return '';
+    
+    const tagPart = `(${tags.map(t => `otag:${t.slug}`).join(' or ')})`;
 
-    let colorPart;
-    if (colors.length === 0) {
-        colorPart = '';
-    } else {
+    let colorPart = '';
+    if (colors.length > 0) {
         colorPart = `id<=${colors.join('')}`;
     }
 
-    const query = [wrappedTags, colorPart].filter(Boolean).join(' ');
+    const query = [tagPart, colorPart, 'game:paper'].filter(Boolean).join(' ');
     console.log('Scryfall query:', query);
     return query;
 }
@@ -244,11 +243,19 @@ colorCheckboxes.forEach(cb => {
 
 
 async function fetchAlternatives(card, query) {
+    if (!query) {
+        renderAlternatives([]);
+        debugOutput.innerText = `⚠️ No tags found — can't build a search query.`;
+        debugOutput.style.color = "#ffb86c";
+        return;
+    }
     // Reset pagination state on every new card search
     alternativesBuffer = [];
     alternativesPage = 0;
     nextScryfallUrl = null;
     currentCard = card;
+
+    showAlternativesLoadingOverlay();
 
     debugOutput.innerText = `🔎 Searching for alternatives...`;
     debugOutput.style.color = "#aaa";
@@ -314,6 +321,7 @@ function renderAlternatives(cards, hasMore = false) {
         resultsContainer.className = 'alternatives-container';
         document.body.appendChild(resultsContainer);
     }
+    hideAlternativesLoadingOverlay();
     resultsContainer.innerHTML = '';
 
     if (cards.length === 0) {
@@ -386,6 +394,27 @@ function updatePaginationControls(hasMore) {
 
     buildControls('paginationControlsTop');
     buildControls('paginationControls');
+}
+
+// Add this helper function near the top with your other helpers
+function showAlternativesLoadingOverlay() {
+    const container = document.getElementById('alternativesContainer');
+    if (!container) return;
+
+    let overlay = document.getElementById('alternativesOverlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'alternativesOverlay';
+        overlay.innerHTML = '<div class="loading-spinner"></div>';
+        container.style.position = 'relative';
+        container.appendChild(overlay);
+    }
+    overlay.classList.remove('hidden');
+}
+
+function hideAlternativesLoadingOverlay() {
+    const overlay = document.getElementById('alternativesOverlay');
+    if (overlay) overlay.classList.add('hidden');
 }
 
 // Event Listeners
