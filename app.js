@@ -16,6 +16,7 @@ let alternativesBuffer = [];
 let alternativesPage = 0;
 let nextScryfallUrl = null;
 let currentCard = null;
+let disabledTagSlugs = new Set();
 const PAGE_SIZE = 25;
 
 let debounceTimer;
@@ -191,12 +192,12 @@ async function renderCardProfile(card) {
 
     tagCloud.innerHTML = '';
     currentCardTags = [];
+    disabledTagSlugs = new Set();
     debugOutput.innerText = `⏳ Fetching crowdsourced tags for "${card.name}"...`;
     debugOutput.style.color = "#aaa";
 
     try {
         const gameplayTags = await fetchTags(card);
-
         currentCardTags = gameplayTags;
 
         if (gameplayTags.length === 0) {
@@ -210,13 +211,25 @@ async function renderCardProfile(card) {
                 const pill = document.createElement('span');
                 pill.className = 'extracted-tag';
                 pill.innerText = tag.name;
+                pill.dataset.slug = tag.slug;
+                pill.addEventListener('click', () => {
+                    if (disabledTagSlugs.has(tag.slug)) {
+                        disabledTagSlugs.delete(tag.slug);
+                        pill.classList.remove('tag-disabled');
+                    } else {
+                        disabledTagSlugs.add(tag.slug);
+                        pill.classList.add('tag-disabled');
+                    }
+                    const enabledTags = currentCardTags.filter(t => !disabledTagSlugs.has(t.slug));
+                    const query = buildScryfallQuery(enabledTags, getSelectedColors(), true);
+                    fetchAlternatives(currentCard, query);
+                });
                 tagCloud.appendChild(pill);
             });
         }
 
-        const selectedColors = getSelectedColors();
-        const scryfallQuery = buildScryfallQuery(currentCardTags, selectedColors);
-        //console.log('Ready to search Scryfall with:', scryfallQuery);
+        const enabledTags = currentCardTags.filter(t => !disabledTagSlugs.has(t.slug));
+        const scryfallQuery = buildScryfallQuery(enabledTags, getSelectedColors(), true);
         await fetchAlternatives(card, scryfallQuery);
 
         cardProfile.classList.remove('hidden');
@@ -255,32 +268,31 @@ colorCheckboxes.forEach(cb => {
     });
 });
 
-
 async function fetchAlternatives(card, query) {
     if (!query) {
         renderAlternatives([]);
-        debugOutput.innerText = `⚠️ No tags found — can't build a search query.`;
+        debugOutput.innerText = `⚠️ No tags selected — enable at least one tag to search.`;
         debugOutput.style.color = "#ffb86c";
         return;
     }
-    // Reset pagination state on every new card search
+
     alternativesBuffer = [];
     alternativesPage = 0;
     nextScryfallUrl = null;
     currentCard = card;
 
     showAlternativesLoadingOverlay();
-
     debugOutput.innerText = `🔎 Searching for alternatives...`;
     debugOutput.style.color = "#aaa";
 
     try {
-        const url = `https://api.scryfall.com/cards/search?q=${encodeURIComponent(query)}&unique=cards`;
-        const response = await fetch(url);
+        const response = await fetch(
+            `https://api.scryfall.com/cards/search?q=${encodeURIComponent(query)}&unique=cards`
+        );
 
         if (response.status === 404) {
             renderAlternatives([]);
-            debugOutput.innerText = `⚠️ No alternatives found for "${card.name}".`;
+            debugOutput.innerText = `⚠️ No results — try disabling some tags.`;
             debugOutput.style.color = "#ffb86c";
             return;
         }
@@ -288,14 +300,12 @@ async function fetchAlternatives(card, query) {
         if (!response.ok) throw new Error(`Scryfall search failed: ${response.status}`);
 
         const data = await response.json();
-
-        // Filter out the searched card and store in buffer
         alternativesBuffer = data.data.filter(c => c.id !== card.id);
         nextScryfallUrl = data.has_more ? data.next_page : null;
 
+        const enabledCount = currentCardTags.length - disabledTagSlugs.size;
         showAlternativesPage();
-
-        debugOutput.innerText = `✅ Showing alternatives for "${card.name}"!`;
+        debugOutput.innerText = `✅ Showing alternatives matching ${enabledCount}/${currentCardTags.length} tags for "${card.name}"!`;
         debugOutput.style.color = "#8be9fd";
 
     } catch (err) {

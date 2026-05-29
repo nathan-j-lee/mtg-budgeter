@@ -378,3 +378,19 @@ input[type="text"]:focus ~ .kbd.search-hint {
     font-size: 11px;
     padding: 3px 8px;
 }
+
+.extracted-tag {
+    cursor: pointer;
+    transition: opacity 0.2s, border-color 0.2s;
+}
+
+.extracted-tag:hover {
+    border-color: #ff79c6;
+}
+
+.tag-disabled {
+    opacity: 0.35;
+    text-decoration: line-through;
+    border-color: #333;
+    color: #888;
+}
