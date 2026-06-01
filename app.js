@@ -112,7 +112,7 @@ function getSelectedColors() {
 function buildScryfallQuery(tags, colors) {
     if (!tags || tags.length === 0) return '';
 
-    const tagPart = `(${tags.map(t => `otag:${t.slug}`).join(' or ')})`;
+    const tagPart = tags.map(t => `otag:${t.slug}`).join(' ');
 
     let colorPart = '';
     if (colors.length > 0) {
