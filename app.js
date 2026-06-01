@@ -55,13 +55,13 @@ async function fetchAutocompleteSuggestions(query) {
 }
 
 function formatPrice(prices) {
-    const usd     = prices?.usd;
+    const usd = prices?.usd;
     const usdFoil = prices?.usd_foil;
 
     if (!usd && !usdFoil && !eur && !eurFoil && !tix) return '<span class="price-na">N/A</span>';
 
     let html = '';
-    if (usd)     html += `<span class="price-tag">USD $${parseFloat(usd).toFixed(2)}</span>`;
+    if (usd) html += `<span class="price-tag">USD $${parseFloat(usd).toFixed(2)}</span>`;
     if (usdFoil) html += `<span class="price-tag foil">USD Foil $${parseFloat(usdFoil).toFixed(2)}</span>`;
 
     return html;
@@ -111,7 +111,7 @@ function getSelectedColors() {
 // Builds the Scryfall search string from saved otags and selected colors
 function buildScryfallQuery(tags, colors) {
     if (!tags || tags.length === 0) return '';
-    
+
     const tagPart = `(${tags.map(t => `otag:${t.slug}`).join(' or ')})`;
 
     let colorPart = '';
@@ -365,6 +365,8 @@ function renderAlternatives(cards, hasMore = false) {
         return;
     }
 
+    let openTagPanel = null; // tracks the currently expanded panel
+
     cards.forEach(card => {
         const isMultiFaced = card.card_faces && !card.image_uris;
         const imageUrl = isMultiFaced
@@ -377,7 +379,72 @@ function renderAlternatives(cards, hasMore = false) {
         cardEl.className = 'alternative-card';
         cardEl.innerHTML = `
             <img src="${imageUrl}" alt="${card.name}" title="${card.name}">
-            <div class="alt-price">${formatPrice(card.prices)}</div>`;
+            <div class="alt-price">${formatPrice(card.prices)}</div>
+            <div class="alt-tag-panel hidden">
+                <div class="alt-tag-panel-inner"></div>
+            </div>`;
+
+        const img = cardEl.querySelector('img');
+        const panel = cardEl.querySelector('.alt-tag-panel');
+        const panelInner = cardEl.querySelector('.alt-tag-panel-inner');
+
+        img.addEventListener('click', async () => {
+            const isAlreadyOpen = !panel.classList.contains('hidden');
+
+            // Close whatever panel is currently open
+            if (openTagPanel && openTagPanel !== panel) {
+                openTagPanel.classList.add('hidden');
+            }
+
+            if (isAlreadyOpen) {
+                panel.classList.add('hidden');
+                openTagPanel = null;
+                return;
+            }
+
+            // Open this panel
+            panel.classList.remove('hidden');
+            openTagPanel = panel;
+
+            // Only fetch once — cached after first load
+            if (!panelInner.dataset.loaded) {
+                panelInner.innerHTML = '<span class="alt-tag-loading">Fetching tags...</span>';
+                try {
+                    const altTags = await fetchTags(card);
+                    const enabledSlugs = new Set(
+                        currentCardTags
+                            .filter(t => !disabledTagSlugs.has(t.slug))
+                            .map(t => t.slug)
+                    );
+
+                    const matching = altTags.filter(t => enabledSlugs.has(t.slug));
+                    const others   = altTags.filter(t => !enabledSlugs.has(t.slug));
+
+                    if (matching.length === 0 && others.length === 0) {
+                        panelInner.innerHTML = '<span class="alt-tag-loading">No tags found</span>';
+                    } else {
+                        panelInner.innerHTML = '';
+                        if (matching.length === 0) {
+                            const warning = document.createElement('div');
+                            warning.className = 'alt-tag-no-overlap';
+                            warning.innerText = '⚠️ Matched via Scryfall index — no tag overlap found';
+                            panelInner.appendChild(warning);
+                        }
+                        [...matching, ...others].forEach(tag => {
+                            const pill = document.createElement('span');
+                            const isMatch = enabledSlugs.has(tag.slug);
+                            pill.className = 'alt-tag-pill ' + (isMatch ? 'alt-tag-match' : 'alt-tag-other');
+                            pill.innerText = tag.name;
+                            panelInner.appendChild(pill);
+                        });
+                    }
+                    panelInner.dataset.loaded = 'true';
+                } catch (err) {
+                    panelInner.innerHTML = '<span class="alt-tag-loading">Failed to load tags</span>';
+                }
+            }
+        });
+
         resultsContainer.appendChild(cardEl);
     });
 

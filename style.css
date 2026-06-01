@@ -395,3 +395,57 @@ input[type="text"]:focus ~ .kbd.search-hint {
     border-color: #333;
     color: #888;
 }
+
+/* --- Alt Card Tag Panel --- */
+
+.alt-tag-no-overlap {
+    width: 100%;
+    font-size: 12px;
+    color: #ffb86c;
+    margin-bottom: 6px;
+    font-style: italic;
+}
+
+.alt-tag-panel {
+    margin-top: 8px;
+    background-color: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    border-radius: 8px;
+    padding: 10px;
+}
+
+.alt-tag-panel-inner {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.alt-tag-pill {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: monospace;
+    font-weight: bold;
+}
+
+.alt-tag-match {
+    background-color: #282a36;
+    color: #50fa7b;
+    border: 1px solid #44475a;
+}
+
+.alt-tag-other {
+    background-color: #1e1e1e;
+    color: #555;
+    border: 1px solid #2a2a2a;
+}
+
+.alt-tag-loading {
+    font-size: 12px;
+    color: #666;
+    font-style: italic;
+}
+
+.alternative-card img {
+    cursor: pointer;
+}
