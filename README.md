@@ -20,7 +20,14 @@ This project is a browser-based utility designed to recommend alternative Magic:
 
 * **Execution:** Connect the main search bar to a throttled input listener. As the user types, the program queries Scryfall's catalog endpoints to return a dynamic, selectable drop-down menu of similarly named cards.
 
----
+* **2.1 — Keyboard Navigation *(Complete)*:**
+  * `ArrowDown` / `ArrowUp` move the highlight through the suggestion list, mirroring the highlighted name into the input field as you navigate — identical to Google's search behavior.
+  * `Enter` confirms the currently highlighted suggestion, or falls back to the first item if none are highlighted.
+  * `Escape` dismisses the dropdown without submitting.
+  * `scrollIntoView` keeps the active item visible when the list overflows.
+  * The active index resets to `-1` any time the dropdown closes or new suggestions are fetched, preventing stale state.
+
+  ---
 
 ### 🏷️ Phase 3: Crowdsourced Tag Extraction via Express Backend *(Complete)*
 

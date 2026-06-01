@@ -20,6 +20,7 @@ let disabledTagSlugs = new Set();
 const PAGE_SIZE = 25;
 
 let debounceTimer;
+let autocompleteIndex = -1;
 
 // Saved state for the current card's gameplay tags
 let currentCardTags = [];
@@ -69,6 +70,7 @@ function formatPrice(prices) {
 // Handle search and autocomplete close when name is clicked on
 function renderAutocomplete(suggestions) {
     autocompleteResults.innerHTML = '';
+    autocompleteIndex = -1;
     if (!suggestions || suggestions.length === 0) {
         closeAutocomplete();
         return;
@@ -91,6 +93,7 @@ function renderAutocomplete(suggestions) {
 function closeAutocomplete() {
     autocompleteResults.innerHTML = '';
     autocompleteResults.classList.add('hidden');
+    autocompleteIndex = -1;
 }
 
 // Handle mismatch of search bar and autocomplete/no results found
@@ -443,18 +446,43 @@ function hideAlternativesLoadingOverlay() {
     if (overlay) overlay.classList.add('hidden');
 }
 
+function updateAutocompleteHighlight(items) {
+    items.forEach((item, i) => {
+        item.classList.toggle('autocomplete-active', i === autocompleteIndex);
+        if (i === autocompleteIndex) {
+            item.scrollIntoView({ block: 'nearest' });
+            cardInput.value = item.innerText;
+        }
+    });
+}
 // Event Listeners
 
 searchBtn.addEventListener('click', handleSearchSubmit);
 
 cardInput.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') {
-        const firstItem = autocompleteResults.querySelector('.autocomplete-item');
-        if (firstItem && !autocompleteResults.classList.contains('hidden')) {
-            cardInput.value = firstItem.innerText;
+    const items = [...autocompleteResults.querySelectorAll('.autocomplete-item')];
+    const isOpen = !autocompleteResults.classList.contains('hidden') && items.length > 0;
+
+    if (event.key === 'ArrowDown') {
+        if (!isOpen) return;
+        event.preventDefault();
+        autocompleteIndex = (autocompleteIndex + 1) % items.length;
+        updateAutocompleteHighlight(items);
+    } else if (event.key === 'ArrowUp') {
+        if (!isOpen) return;
+        event.preventDefault();
+        autocompleteIndex = (autocompleteIndex - 1 + items.length) % items.length;
+        updateAutocompleteHighlight(items);
+    } else if (event.key === 'Enter') {
+        if (isOpen && autocompleteIndex >= 0) {
+            cardInput.value = items[autocompleteIndex].innerText;
+        } else if (isOpen) {
+            cardInput.value = items[0].innerText;
         }
         closeAutocomplete();
         handleSearchSubmit();
+    } else if (event.key === 'Escape') {
+        closeAutocomplete();
     }
 });
 

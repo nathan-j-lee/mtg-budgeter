@@ -166,7 +166,8 @@ button:hover {
     border-bottom: none;
 }
 
-.autocomplete-item:hover {
+.autocomplete-item:hover,
+.autocomplete-active {
     background-color: #ff79c6;
     color: #121212;
     font-weight: bold;
