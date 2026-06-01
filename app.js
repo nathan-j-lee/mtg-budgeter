@@ -268,6 +268,14 @@ colorCheckboxes.forEach(cb => {
             colorlessCheckbox.closest('label').style.opacity = '1';
             colorlessCheckbox.closest('label').style.pointerEvents = 'auto';
         }
+
+        // If a card is already loaded, re-run the search with the updated color
+        // selection — tag enabled/disabled state is preserved as-is
+        if (currentCard && currentCardTags.length > 0) {
+            const enabledTags = currentCardTags.filter(t => !disabledTagSlugs.has(t.slug));
+            const query = buildScryfallQuery(enabledTags, getSelectedColors());
+            fetchAlternatives(currentCard, query);
+        }
     });
 });
 
