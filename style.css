@@ -449,3 +449,87 @@ input[type="text"]:focus ~ .kbd.search-hint {
 .alternative-card img {
     cursor: pointer;
 }
+
+.tag-unindexed {
+    opacity: 0.5;
+    text-decoration: line-through;
+    border-color: #ff5555;
+    color: #ff5555;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* --- Card Flip --- */
+.art-frame {
+    position: relative;
+}
+
+.flip-btn {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    background-color: rgba(30, 30, 30, 0.85);
+    border: 1px solid #444;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 18px;
+    color: #fff;
+    padding: 0;
+    transition: background-color 0.2s;
+    z-index: 5;
+}
+
+.flip-btn:hover {
+    background-color: #ff79c6;
+}
+
+.alt-flip-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background-color: rgba(30, 30, 30, 0.85);
+    border: 1px solid #444;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 15px;
+    color: #fff;
+    padding: 0;
+    transition: background-color 0.2s;
+    z-index: 5;
+}
+
+.alt-flip-btn:hover {
+    background-color: #ff79c6;
+}
+
+@keyframes flipOut {
+    from { transform: rotateY(0deg); }
+    to   { transform: rotateY(90deg); }
+}
+
+@keyframes flipIn {
+    from { transform: rotateY(-90deg); }
+    to   { transform: rotateY(0deg); }
+}
+
+.flipping-out {
+    animation: flipOut 0.2s ease-in forwards;
+}
+
+.flipping-in {
+    animation: flipIn 0.2s ease-out forwards;
+}
+
+.alternative-card {
+    position: relative;
+}

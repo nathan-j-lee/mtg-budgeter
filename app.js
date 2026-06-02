@@ -58,7 +58,7 @@ function formatPrice(prices) {
     const usd = prices?.usd;
     const usdFoil = prices?.usd_foil;
 
-    if (!usd && !usdFoil && !eur && !eurFoil && !tix) return '<span class="price-na">N/A</span>';
+    if (!usd && !usdFoil) return '<span class="price-na">N/A</span>';
 
     let html = '';
     if (usd) html += `<span class="price-tag">USD $${parseFloat(usd).toFixed(2)}</span>`;
@@ -193,6 +193,36 @@ async function renderCardProfile(card) {
     document.getElementById('profilePrice').innerHTML = formatPrice(card.prices);
     cardImage.src = isMultiFaced ? primaryFace.image_uris.normal : card.image_uris.normal;
 
+    // Flip button for double-faced cards
+    const existingFlipBtn = document.getElementById('profileFlipBtn');
+    if (existingFlipBtn) existingFlipBtn.remove();
+    if (isMultiFaced && card.card_faces.length >= 2) {
+        let showingFront = true;
+        const frontUrl = card.card_faces[0].image_uris.normal;
+        const backUrl = card.card_faces[1].image_uris.normal;
+
+        const flipBtn = document.createElement('button');
+        flipBtn.id = 'profileFlipBtn';
+        flipBtn.className = 'flip-btn';
+        flipBtn.title = 'Flip card';
+        flipBtn.innerText = '🔄';
+
+        flipBtn.addEventListener('click', () => {
+            showingFront = !showingFront;
+            cardImage.classList.add('flipping-out');
+            cardImage.addEventListener('animationend', () => {
+                cardImage.src = showingFront ? frontUrl : backUrl;
+                cardImage.classList.remove('flipping-out');
+                cardImage.classList.add('flipping-in');
+                cardImage.addEventListener('animationend', () => {
+                    cardImage.classList.remove('flipping-in');
+                }, { once: true });
+            }, { once: true });
+        });
+
+        document.querySelector('.art-frame').appendChild(flipBtn);
+    }
+
     tagCloud.innerHTML = '';
     currentCardTags = [];
     disabledTagSlugs = new Set();
@@ -224,7 +254,7 @@ async function renderCardProfile(card) {
                         pill.classList.add('tag-disabled');
                     }
                     const enabledTags = currentCardTags.filter(t => !disabledTagSlugs.has(t.slug));
-                    const query = buildScryfallQuery(enabledTags, getSelectedColors(), true);
+                    const query = buildScryfallQuery(enabledTags, getSelectedColors());
                     fetchAlternatives(currentCard, query);
                 });
                 tagCloud.appendChild(pill);
@@ -232,7 +262,7 @@ async function renderCardProfile(card) {
         }
 
         const enabledTags = currentCardTags.filter(t => !disabledTagSlugs.has(t.slug));
-        const scryfallQuery = buildScryfallQuery(enabledTags, getSelectedColors(), true);
+        const scryfallQuery = buildScryfallQuery(enabledTags, getSelectedColors());
         await fetchAlternatives(card, scryfallQuery);
 
         cardProfile.classList.remove('hidden');
@@ -297,33 +327,76 @@ async function fetchAlternatives(card, query) {
     debugOutput.style.color = "#aaa";
 
     try {
-        const response = await fetch(
-            `https://api.scryfall.com/cards/search?q=${encodeURIComponent(query)}&unique=cards`
-        );
+        const enabledTags = currentCardTags.filter(t => !disabledTagSlugs.has(t.slug));
+        const { data, skippedSlugs } = await fetchWithFallback(enabledTags, getSelectedColors());
 
-        if (response.status === 404) {
+        if (!data) {
             renderAlternatives([]);
             debugOutput.innerText = `⚠️ No results — try disabling some tags.`;
             debugOutput.style.color = "#ffb86c";
             return;
         }
-
-        if (!response.ok) throw new Error(`Scryfall search failed: ${response.status}`);
-
-        const data = await response.json();
         alternativesBuffer = data.data.filter(c => c.id !== card.id);
         nextScryfallUrl = data.has_more ? data.next_page : null;
 
-        const enabledCount = currentCardTags.length - disabledTagSlugs.size;
+        const enabledCount = enabledTags.length;
+
+        // Mark any unindexed tags in the tag cloud as broken
+        if (skippedSlugs.length > 0) {
+            skippedSlugs.forEach(slug => {
+                disabledTagSlugs.add(slug);
+                const pill = tagCloud.querySelector(`[data-slug="${slug}"]`);
+                if (pill) {
+                    pill.classList.remove('tag-disabled');
+                    pill.classList.add('tag-unindexed');
+                }
+            });
+        }
+
+        const skippedNote = skippedSlugs.length > 0
+            ? ` (⚠️ ${skippedSlugs.length} unindexed tag${skippedSlugs.length > 1 ? 's' : ''} removed)`
+            : '';
         showAlternativesPage();
-        debugOutput.innerText = `✅ Showing alternatives matching ${enabledCount}/${currentCardTags.length} tags for "${card.name}"!`;
-        debugOutput.style.color = "#8be9fd";
+        debugOutput.innerText = `✅ Showing alternatives matching ${enabledCount - skippedSlugs.length}/${currentCardTags.length} tags for "${card.name}"!${skippedNote}`;
+        debugOutput.style.color = skippedSlugs.length > 0 ? "#ffb86c" : "#8be9fd";
 
     } catch (err) {
         console.error('Alternative fetch failed:', err);
         debugOutput.innerText = `❌ Could not fetch alternatives. ${err.message}`;
         debugOutput.style.color = "#ff5555";
     }
+}
+
+// Retries the Scryfall search, dropping any slugs that cause a 404
+async function fetchWithFallback(tags, colors) {
+    // First, test each tag individually to find broken ones
+    const skippedSlugs = [];
+    const validTags = [];
+
+    await Promise.all(tags.map(async (tag) => {
+        const testQuery = `otag:${tag.slug}`;
+        const res = await fetch(
+            `https://api.scryfall.com/cards/search?q=${encodeURIComponent(testQuery)}&unique=cards`
+        );
+        if (res.status === 404) {
+            skippedSlugs.push(tag.slug);
+        } else {
+            validTags.push(tag);
+        }
+    }));
+
+    if (validTags.length === 0) return { data: null, skippedSlugs };
+
+    // Now run the real query with only valid tags
+    const query = buildScryfallQuery(validTags, colors);
+    const response = await fetch(
+        `https://api.scryfall.com/cards/search?q=${encodeURIComponent(query)}&unique=cards`
+    );
+
+    if (response.ok) return { data: await response.json(), skippedSlugs };
+    if (response.status === 404) return { data: null, skippedSlugs };
+
+    throw new Error(`Scryfall search failed: ${response.status}`);
 }
 
 async function showAlternativesPage() {
@@ -388,6 +461,34 @@ function renderAlternatives(cards, hasMore = false) {
         const panel = cardEl.querySelector('.alt-tag-panel');
         const panelInner = cardEl.querySelector('.alt-tag-panel-inner');
 
+        // Flip button for double-faced alt cards
+        if (isMultiFaced && card.card_faces.length >= 2) {
+            let showingFront = true;
+            const frontUrl = card.card_faces[0].image_uris?.normal;
+            const backUrl = card.card_faces[1].image_uris?.normal;
+
+            const altFlipBtn = document.createElement('button');
+            altFlipBtn.className = 'alt-flip-btn';
+            altFlipBtn.title = 'Flip card';
+            altFlipBtn.innerText = '🔄';
+
+            altFlipBtn.addEventListener('click', (e) => {
+                e.stopPropagation(); // don't trigger the tag panel
+                showingFront = !showingFront;
+                img.classList.add('flipping-out');
+                img.addEventListener('animationend', () => {
+                    img.src = showingFront ? frontUrl : backUrl;
+                    img.classList.remove('flipping-out');
+                    img.classList.add('flipping-in');
+                    img.addEventListener('animationend', () => {
+                        img.classList.remove('flipping-in');
+                    }, { once: true });
+                }, { once: true });
+            });
+
+            cardEl.appendChild(altFlipBtn);
+        }
+
         img.addEventListener('click', async () => {
             const isAlreadyOpen = !panel.classList.contains('hidden');
 
@@ -418,7 +519,7 @@ function renderAlternatives(cards, hasMore = false) {
                     );
 
                     const matching = altTags.filter(t => enabledSlugs.has(t.slug));
-                    const others   = altTags.filter(t => !enabledSlugs.has(t.slug));
+                    const others = altTags.filter(t => !enabledSlugs.has(t.slug));
 
                     if (matching.length === 0 && others.length === 0) {
                         panelInner.innerHTML = '<span class="alt-tag-loading">No tags found</span>';
